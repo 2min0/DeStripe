@@ -116,7 +116,7 @@ class FGNN(nn.Module):
 
             else:
                 out, sum = self.uncor_operator(h_p=uncor_neigh, neighbor=uncor_neigh)
-                uncor_index_b = cor_index.float().expand(out.shape[0], self.out_features)
+                uncor_index_b = uncor_index.float().expand(out.shape[0], self.out_features)
                 uncor_out_re = out.real.type(torch.float32)
                 uncor_out_im = out.imag.type(torch.float32)
 
