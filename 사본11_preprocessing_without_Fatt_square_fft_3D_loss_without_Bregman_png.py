@@ -2,12 +2,15 @@ import argparse
 import os
 import numpy as np
 import warnings
+import torch
 
 from numpy.fft import fftn, fftshift
 from tqdm import tqdm
 from skimage import io
 import matplotlib.pyplot as plt
 
+# Prepare for use of CUDA
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def preprocessing(opt):
     print('Generating corruption mask...')
