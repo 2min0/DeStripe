@@ -9,8 +9,8 @@ import warnings
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
-from 사본8_model_without_Fatt_square_fft_3D_loss import *
-from 사본8_dataloader_without_Fatt_square_fft_3D_loss import DeStripe_Dataset
+from 사본11_model_without_Fatt_square_fft_3D_loss_without_Bregman_png import *
+from 사본11_dataloader_without_Fatt_square_fft_3D_loss_without_Bregman_png import DeStripe_Dataset
 from external_code_utils_torch import *
 from torch.utils.data import DataLoader
 from skimage import io
@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.0001, help='Adam: learning rate')
-parser.add_argument('--in_dir', type=str, default='./dataset/2frame_square_fft.tif', help="input directory")
+parser.add_argument('--in_dir', type=str, default='./dataset/DRIVE_raw_211002_SCAPE_casperGFP_4dpf_S1_R2_801planex1vol.tif', help="input directory")
 parser.add_argument('--out_dir', type=str, default='./사본9_result')
 
 parser.add_argument('--ring_width', type=int, default=2, help='width of each annulus ring (unit: pixel)')

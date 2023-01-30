@@ -1,34 +1,34 @@
-import argparse
 import os
+import argparse
 import numpy as np
 import warnings
 import torch
 
-from numpy.fft import fftn, fftshift
+from torch.fft import fftn, fftshift
 from tqdm import tqdm
 from skimage import io
 import matplotlib.pyplot as plt
 
-# Prepare for use of CUDA
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def preprocessing(opt):
+    # Prepare for use of CUDA
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
     print('Generating corruption mask...')
     # load input 3D image (=2D images are stacked along z-axis)
     img_3D = io.imread(opt.input_path)
 
+    output_dir = opt.input_path.split('/')[-1][:-4]
+    os.makedirs(f'{opt.output_path}/{output_dir}', exist_ok=True)
+
+    volume = img_3D.shape[0]
+    cut = len(str(volume))
     (h, w) = img_3D.shape[1:]
     w_h = max(h, w)
-    if opt.square_fft == True:
-        output = np.zeros((img_3D.shape[0], w_h, w_h))
-    else:
-        output = np.zeros((img_3D.shape[0], h, w))
 
-    img_name = opt.input_path.split('/')[-1][:-4]
-
-    for i in range(img_3D.shape[0]):
-        print(f'{i+1} / {img_3D.shape[0]}')
-        img = img_3D[i]
+    for i in range(volume):
+        print(f'{i+1} / {volume}')
+        img = torch.Tensor(img_3D[i].astype(np.int16)).to(device)
 
         # To normalize, divided by h*w
         if opt.square_fft == True:
@@ -38,6 +38,7 @@ def preprocessing(opt):
 
         #####################################################
         # # JUST for visualization of image in Fourier domain
+        # fft_img = fft_img.detach().cpu().numpy()
         # FFT_image_im = np.log(np.abs(fft_img))  # magnitude
         # # Normalization: range 0~255
         # FFT_image_im = (FFT_image_im - np.min(FFT_image_im)) / (np.max(FFT_image_im) - np.min(FFT_image_im)) * 255
@@ -61,27 +62,29 @@ def preprocessing(opt):
         ###########################
         # # Display 'r'
         # r = np.clip(np.round((r - np.min(r))/(np.max(r) - np.min(r)) * 255), 0, 255)
-        # plt.imshow(r)
+        # plt.imshow(r, cmap='gray')
         # plt.show()
         ###########################
 
         # Corruption Matrix
-        Cor_Matrix = np.zeros(r.shape)
+        Cor_Matrix = torch.zeros(r.shape).to(device)
         len_r = int(np.max(r)) + 1
+        r = torch.Tensor(r).to(device)
+
         for rr in tqdm(range(len_r)):
             # Magnitude
-            fft_img_mag = np.abs(fft_img)
+            fft_img_mag = torch.abs(fft_img)
 
             # Calculate std of every annulus--> use them for whitening.
-            annulus_list = fft_img_mag[np.where((r >= rr) & (r < rr+1))]
-            std = np.std(annulus_list)
+            annulus_list = fft_img_mag[torch.where((r >= rr) & (r < rr+1))]
+            std = torch.std(annulus_list)
 
             '''
             Whitening means to make the variance of the distribution as 1.
             It doesn't contain making the mean of the distribution as 0.
             '''
             # Whitening and Rayleigh function: probability of being uncorrupted
-            Cor_Matrix = np.where((r >= rr) & (r < rr+1), np.exp(-(fft_img_mag / std)**2/2), Cor_Matrix)
+            Cor_Matrix = torch.where((r >= rr) & (r < rr+1), torch.exp(-(fft_img_mag / std)**2/2), Cor_Matrix)
 
         ########################
         # # Display 'Corruption Matrix'
@@ -99,8 +102,8 @@ def preprocessing(opt):
         #######################
 
         # Corruption Mask
-        Cor_Mask = np.where(Cor_Matrix > 0.001, 0, 1)
-        Cor_Mask = np.clip(np.round(Cor_Mask * 255), 0, 255)
+        Cor_Mask = torch.where(Cor_Matrix > 0.001, 0, 1)
+        Cor_Mask = Cor_Mask * 255
 
         #######################
         # # Display Corruption Mask
@@ -109,9 +112,8 @@ def preprocessing(opt):
         #######################
 
         # Save corruption mask
-        output[i] = Cor_Mask
-
-    io.imsave(f'{opt.output_path}/{img_name}_square_fft.png', output)
+        Cor_Mask = Cor_Mask.detach().cpu().numpy().astype('uint8')
+        io.imsave(f'{opt.output_path}/{output_dir}/{str(i).zfill(cut)}.png', Cor_Mask)
 
 
 if __name__ == '__main__':
